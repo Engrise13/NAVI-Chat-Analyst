@@ -13,6 +13,9 @@ NAVI Chat Analyst accepts 4 different arguments:
 
 It uses an Ollama model to analyze the chat with pre-made prompts for different modes and then streams the output in real time.
 
+## Logic
+![diagram](diagram.png)
+
 ## Features
 
 - Fully local & no internet required
