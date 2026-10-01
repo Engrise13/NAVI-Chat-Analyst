@@ -1,6 +1,5 @@
 # NAVI Chat Analyst
-
-NAVI Chat Analyst is an Ollama-based chat analysis engine built with Python.
+Local AI chat analysis engine built with Python & Ollama.
 
 ## How it works
 
