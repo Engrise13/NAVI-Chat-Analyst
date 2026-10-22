@@ -1,8 +1,9 @@
 import argparse
 import ollama
+import json
 
 from pathlib import Path
-from prompt import user_prompt, system_prompt
+from model_data import user_prompt, system_prompt, output_schema
 
 # Chat file path and model are required, mode and context size have defaults
 parser = argparse.ArgumentParser()
@@ -36,15 +37,15 @@ response = ollama.chat(
             "content": input_prompt,
         },
     ],
-    stream=True, # Stream the response in real time
-    think=False, # Prevent additional reasoning
+    format=output_schema,
+    stream=False,
+    think=False,
     options={
         "num_ctx": args.context,
-        "temperature": 0.2, # Lower temperature for the model to be more consistent
+        "temperature": 0.2,
     },
 )
 
-for chunk in response:
-    print(chunk["message"]["content"], end="", flush=True)
+result = json.loads(response.message.content)
 
-print() # New line at the end of the output
+print(json.dumps(result, ensure_ascii=False, indent=2))
