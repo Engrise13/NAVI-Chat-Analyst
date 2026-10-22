@@ -17,7 +17,7 @@ if not chat_path.is_file():
     parser.error(f"Chat file does not exist: {chat_path}")
 chat = chat_path.read_text(encoding="utf-8")
 
-prompt = f"""
+input_prompt = f"""
 {user_prompt}
 <chat>
 {chat}
@@ -33,7 +33,7 @@ response = ollama.chat(
         },
         {
             "role": "user",
-            "content": prompt,
+            "content": input_prompt,
         },
     ],
     stream=True, # Stream the response in real time
