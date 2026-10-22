@@ -2,13 +2,12 @@ import argparse
 import ollama
 
 from pathlib import Path
-from prompt import mode_prompts, system_prompt
+from prompt import user_prompt, system_prompt
 
 # Chat file path and model are required, mode and context size have defaults
 parser = argparse.ArgumentParser()
 parser.add_argument("--chat", help="Path to chat export file", required=True)
 parser.add_argument("--model", help="Model to use for analysis", required=True)
-parser.add_argument("--mode", help="Analysis mode", choices=list(mode_prompts.keys()), default="Default")
 parser.add_argument("--context", help="Model context size", type=int, default=8192)
 args = parser.parse_args()
 
@@ -19,7 +18,7 @@ if not chat_path.is_file():
 chat = chat_path.read_text(encoding="utf-8")
 
 prompt = f"""
-{mode_prompts[args.mode]}
+{user_prompt}
 <chat>
 {chat}
 </chat>
