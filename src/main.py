@@ -2,7 +2,7 @@ import argparse
 import ollama
 
 from pathlib import Path
-from prompts import mode_prompts, system_prompt
+from prompt import mode_prompts, system_prompt
 
 # Chat file path and model are required, mode and context size have defaults
 parser = argparse.ArgumentParser()
