@@ -44,11 +44,7 @@ elif choice == "quit":
 
 result = analyze(chat_path, model, int(context_size))
 
-console.print(
-    Syntax(
-        json.dumps(result, ensure_ascii=False,indent=2),
-        "json",
-        theme="monokai",
-        background_color="default"
-    )
-)
+for x in result.keys():
+    print(f"{x}: {result[x]}")
+
+## normal output still needed
