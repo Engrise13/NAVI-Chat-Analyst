@@ -128,7 +128,8 @@ output_schema = {
             "type": "array",
             "items": {
                 "type": "string"
-            }
+            },
+            "maxItems": 5
         },
         "emotional_tone": {
             "type": "string"

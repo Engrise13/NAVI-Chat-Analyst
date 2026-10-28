@@ -1,5 +1,5 @@
-from sys import exit
 from logic import analyze
+from output import chat_output
 
 from rich.console import Console
 from rich.panel import Panel
@@ -19,29 +19,28 @@ console.print(
     )
 )
 
-choice = Prompt.ask(
-    choices=["analyze", "quit"],
-    default="analyze",
-)
+while True:
 
-if choice == "analyze":
-    chat_path = Prompt.ask(
-        "[bold green]chat path[/bold green]"
+    choice = Prompt.ask(
+        choices=["analyze", "quit"],
+        default="analyze",
     )
-    model = Prompt.ask(
-        "[bold green]model[/bold green]",
-        default="qwen3.5:9b"
-    )
-    context_size = Prompt.ask(
-        "[bold green]context size[/bold green]",
-        default="8192"
-    )
-elif choice == "quit":
-    exit()
 
-result = analyze(chat_path, model, int(context_size))
+    if choice == "analyze":
+        chat_path = Prompt.ask(
+            "[bold green]chat path[/bold green]"
+        )
+        model = Prompt.ask(
+            "[bold green]model[/bold green]",
+            default="qwen3.5:9b"
+        )
+        context_size = Prompt.ask(
+            "[bold green]context size[/bold green]",
+            default="8192"
+        )
+    elif choice == "quit":
+        break
 
-for x in result.keys():
-    print(f"{x}: {result[x]}")
+    result = analyze(chat_path, model, int(context_size))
 
-## normal output still needed
+    chat_output(result)
