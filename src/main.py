@@ -1,12 +1,9 @@
-import json
-
 from sys import exit
 from logic import analyze
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
-from rich.syntax import Syntax
 
 console = Console()
 
