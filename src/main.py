@@ -31,10 +31,10 @@ while True:
         context_size = IntPrompt.ask("[bold green]context size[/]", default="8192")
         try:
             with console.status("[bold magenta]analyzing chat with ollama...[/]"):
-                result = analyze(chat_path, model, context_size)
+                result = analyze(chat_path, model, int(context_size))
             chat_output(result)
         except (FileNotFoundError, ValueError, RuntimeError) as error:
-            console.print(f"[bold red]error:[/] {error}")
+            console.print(f"[red]{error}[/]")
 
     elif choice == "quit":
         break
