@@ -41,6 +41,7 @@ system_prompt = """
 - каждая числовая оценка должна отражать содержание переписки, а не случайное предположение.
 """
 
+
 user_prompt = """
 проанализируй предоставленный ниже диалог.
 
@@ -115,69 +116,51 @@ user_prompt = """
 ДИАЛОГ ДЛЯ АНАЛИЗА:
 """
 
+
 output_schema = {
     "type": "object",
     "properties": {
-        "summary": {
-            "type": "string"
-        },
-        "primary_intent": {
-            "type": "string"
-        },
+        "summary": {"type": "string"},
+        "primary_intent": {"type": "string"},
         "key_topics": {
             "type": "array",
-            "items": {
-                "type": "string"
-            },
-            "maxItems": 5
+            "items": {"type": "string"},
+            "minItems": 1,
+            "maxItems": 5,
         },
-        "emotional_tone": {
-            "type": "string"
-        },
+        "emotional_tone": {"type": "string"},
         "outcomes_and_open_questions": {
             "type": "array",
-            "items": {
-                "type": "string"
-            }
+            "items": {"type": "string"},
+            "minItems": 1,
+            "maxItems": 5,
         },
         "scores": {
             "type": "object",
             "properties": {
-                "intent_clarity": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 100
-                },
-                "relevance": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 100
-                },
+                "intent_clarity": {"type": "integer", "minimum": 0, "maximum": 100},
+                "relevance": {"type": "integer", "minimum": 0, "maximum": 100},
                 "constructive_quality": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 100
+                    "maximum": 100,
                 },
                 "mutual_understanding": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 100
+                    "maximum": 100,
                 },
-                "goal_progress": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 100
-                }
+                "goal_progress": {"type": "integer", "minimum": 0, "maximum": 100},
             },
             "required": [
                 "intent_clarity",
                 "relevance",
                 "constructive_quality",
                 "mutual_understanding",
-                "goal_progress"
+                "goal_progress",
             ],
-            "additionalProperties": False
-        }
+            "additionalProperties": False,
+        },
     },
     "required": [
         "summary",
@@ -185,7 +168,7 @@ output_schema = {
         "key_topics",
         "emotional_tone",
         "outcomes_and_open_questions",
-        "scores"
+        "scores",
     ],
-    "additionalProperties": False
+    "additionalProperties": False,
 }
