@@ -1,8 +1,8 @@
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import IntPrompt, Prompt
+from rich.prompt import Prompt
 
-from logic import analyze
+from logic import analyze, chat_parse
 from output import chat_output
 
 console = Console()
@@ -11,8 +11,7 @@ console.print(
     Panel(
         "AI chat analyzer built with [bold green]Python[/] & [bold green]Ollama.[/]\n"
         "[bold green][ chat path ][/] - path to your chat export.\n"
-        "[bold green][ model ][/] - model used. Default: [bold cyan]qwen3.5:9b[/]\n"
-        "[bold green][ context size ][/] - amount of context for the model. Default: [bold cyan]8192[/]",
+        "[bold green][ model ][/] - model used. Default: [bold cyan]qwen3.5:9b[/]\n",
         title="[bold] NAVI CHAT ANALYST [/]",
         border_style="green",
         padding=(1, 3),
@@ -28,10 +27,10 @@ while True:
     if choice == "analyze":
         chat_path = Prompt.ask("[bold green]chat path[/]")
         model = Prompt.ask("[bold green]model[/]", default="qwen3.5:9b")
-        context_size = IntPrompt.ask("[bold green]context size[/]", default="8192")
         try:
             with console.status("[bold magenta]analyzing chat with ollama...[/]"):
-                result = analyze(chat_path, model, int(context_size))
+                parsed_chat = chat_parse(chat_path)
+                result = analyze(parsed_chat, model, 8192)
             chat_output(result)
         except (FileNotFoundError, ValueError, RuntimeError) as error:
             console.print(f"[red]{error}[/]")

@@ -7,38 +7,135 @@ import ollama
 from model_data import output_schema, system_prompt, user_prompt
 
 
-def analyze(chat_path: str | Path, model: str, context: int) -> dict[str, Any]:
-    chat_path = Path(chat_path)
+def ask_llm(
+    prompt: str,
+    content: str,
+    model: str,
+    context: int = 8192,
+    schema: dict[str, Any] | None = None,
+) -> str:
+    options = {
+        "num_ctx": context,
+        "temperature": 0.2,
+        "think": False,
+    }
 
-    if not chat_path.is_file():
-        raise FileNotFoundError(f"Chat file does not exist: {chat_path}")
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": content},
+        ],
+        "options": options,
+        "stream": False,
+    }
 
-    chat = chat_path.read_text(encoding="utf-8").strip()
+    if schema:
+        kwargs["format"] = schema
 
-    if not chat:
-        raise ValueError(f"Chat file is empty: {chat_path}")
+    response = ollama.chat(**kwargs)
+    return response["message"]["content"]
 
-    input_prompt = f"{user_prompt}\n<chat>\n{chat}\n</chat>"
+
+def msg_slice(input_text: str, part_size: int = 300, overlap: int = 50) -> list[str]:
+    lines = input_text.splitlines()
+    ready_parts = []
+    step = max(1, part_size - overlap)
+
+    for i in range(0, len(lines), step):
+        part = lines[i : i + part_size]
+        ready_parts.append("\n".join(part))
+
+        if i + part_size >= len(lines):
+            break
+
+    return ready_parts
+
+
+def chat_parse(chat_path: str | Path) -> str:
+    path = Path(str(chat_path).strip("'\""))
+    if not path.is_file():
+        raise FileNotFoundError(f"chat file not found: {path}")
+
+    content = path.read_text(encoding="utf-8").strip()
+
     try:
-        response = ollama.chat(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": input_prompt},
-            ],
-            format=output_schema,
-            stream=False,
-            think=False,
-            options={
-                "num_ctx": context,
-                "temperature": 0.2,
-            },
-        )
+        json_content = json.loads(content)
+    except ValueError:
+        return content
+
+    messages = json_content.get("messages", [])
+    lines = []
+
+    for msg in messages:
+        if msg.get("type") != "message":
+            continue
+
+        sender = msg.get("from", "неизвестный")
+        date = msg.get("date", "неизвестно когда").replace("T", " ")[:16]
+        text = msg.get("text", "")
+
+        if isinstance(text, list):
+            normal_parts = []
+            for part in text:
+                if isinstance(part, str):
+                    normal_parts.append(part)
+                elif isinstance(part, dict):
+                    normal_parts.append(part.get("text", ""))
+            text = "".join(normal_parts)
+
+        text = text.strip()
+        if text:
+            lines.append(f"[{date}] {sender}: {text}")
+
+    return "\n".join(lines) if lines else content
+
+
+def analyze(chat: str, model: str, context: int = 8192) -> dict[str, Any]:
+    if not chat.strip():
+        raise ValueError("Chat is empty!")
+
+    parts = msg_slice(chat)
+    if not parts:
+        raise ValueError("Chat has no readable messages!")
+
+    try:
+        if len(parts) == 1:
+            input_prompt = f"{user_prompt}\n<chat>\n{parts[0]}\n</chat>"
+            raw_response = ask_llm(
+                prompt=system_prompt,
+                content=input_prompt,
+                model=model,
+                context=context,
+                schema=output_schema,
+            )
+        else:
+            summaries = []
+            part_prompt = "сделай краткую выжимку фрагмента переписки на 2-3 предложения: ключевые события, факты, темы и динамику общения."
+            part_number = 1
+            for part in parts:
+                summary = ask_llm(
+                    prompt=part_prompt,
+                    content=part,
+                    model=model,
+                    context=context,
+                )
+                summaries.append(f"--- часть {part_number} ---\n{summary}")
+                part_number += 1
+
+            combined_summary = "\n\n".join(summaries)
+            final_content = f"{user_prompt}\n<chat_summaries>\n{combined_summary}\n</chat_summaries>"
+
+            raw_response = ask_llm(
+                prompt=system_prompt,
+                content=final_content,
+                model=model,
+                context=context,
+                schema=output_schema,
+            )
 
     except Exception as error:
         raise RuntimeError(f"failed to communicate with ollama: {error}") from error
-
-    raw_response = response.message.content
 
     try:
         return json.loads(raw_response)
