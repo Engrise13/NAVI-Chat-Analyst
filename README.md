@@ -1,44 +1,100 @@
 # NAVI Chat Analyst
-Local AI chat analysis engine built with Python & Ollama.
 
-## How it works
+[![Python](https://img.shields.io/badge/Python-3.x-007ACC?logo=python&logoColor=white)](#)
+[![Version](https://img.shields.io/badge/version-1.0-orange)](#)
+[![Status](https://img.shields.io/badge/status-in%20development-gold)](#)
+[![Platform](https://img.shields.io/badge/platform-any-lightgrey)](#)
+[![License](https://img.shields.io/badge/license-MIT-green)](#)
 
-NAVI Chat Analyst accepts 4 different arguments:
+Local LLM-powered dialogue analysis engine built on top of Python and Ollama. Evaluates chat logs, extracts structured intent, emotional tone, outcomes, and computes quantified communication metrics via JSON Schema enforcement.
 
-- `--chat` to specify the chat export file that will be analyzed (`.txt` or `.json`)
-- `--model` to specify the model that will be used (must be installed locally)
-- `--mode` to specify the analysis mode (default mode is `Default`)
-- `--context` to specify the context window for the model (default is `8192`)
+---
 
-It uses an Ollama model to analyze the chat with pre-made prompts for different modes and then streams the output in real time.
+## Technical Specifications
 
-## Logic
-![diagram](diagram.png)
+- **Execution Mode:** Local execution (offline, no external network calls).
+- **Target Context Window:** Calibrated for `8192` model tokens.
+- **Throughput / Capacity:** Scaled to process batches of up to `10,000` messages.
+- **Chunking Pipeline:** Overlapping sliding window (`part_size=500`, `overlap=50`) with recursive chunk summarization for extended logs.
+- **Inference Runtime:** [Ollama](https://ollama.com/) (recommended default: `qwen3.5:9b`).
+- **Input Formats:** Telegram JSON export format or plain raw `.txt` chat dumps.
 
-## Features
+---
 
-- Fully local & no internet required
-- Flexible chat analysis with different modes
-- Supports different chat text files
-- Works with any Ollama model installed locally
-- Streams the analysis output in real time
+## Architecture & Analysis Pipeline
 
-## Libraries
+1. **Ingestion & Normalization:** `chat_parse` standardizes timestamps, sender metadata, and multi-part string entities into single-line uniform logs.
+2. **Context Window Slicing:** Long histories exceeding window limits are split into overlapping chunks, recursively summarized, and aggregated into a high-level representation.
+3. **Structured Inference:** Extracted chat tokens are evaluated against a strict JSON Schema returning:
+   - `summary`: Objective overview of the interaction.
+   - `primary_intent`: Core driver of the dialogue initiator.
+   - `key_topics`: Clustered agenda items and friction points.
+   - `emotional_tone`: Observed conversational temperature and sentiment.
+   - `outcomes_and_open_questions`: Explicit agreements, action items, and unresolved questions.
+   - `scores`: Quantified scalar metrics (0–100): `intent_clarity`, `relevance`, `constructive_quality`, `mutual_understanding`, `goal_progress`.
+4. **Terminal Formatting:** Rendered using sanitized [Rich](https://github.com/Textualize/rich) panel components.
 
-- [Ollama](https://pypi.org/project/ollama/)
-- `argparse` (included in Python)
-- `pathlib` (included in Python)
+---
 
-## Usage examples
+## Dependencies
 
-Basic analysis:
+- Python `3.10+`
+- [ollama](https://pypi.org/project/ollama/)
+- [rich](https://pypi.org/project/rich/)
+
+Install dependencies:
 
 ```bash
-python main.py --chat /path-to-file/export.json --model ai-model
+pip install ollama rich
 ```
 
-Analysis with a specific mode and context size:
+Ensure Ollama is running and the target model is pulled:
 
 ```bash
-python main.py --chat /path-to-file/export.json --model ai-model --mode Business --context 4096
+ollama serve
+ollama pull qwen3.5:9b
 ```
+
+---
+
+## Usage
+
+Launch interactive CLI:
+
+```bash
+python main.py
+```
+
+Prompts:
+1. `choice`: select `analyze` or `quit`.
+2. `chat path`: path to input file (`.json` or `.txt`).
+3. `model`: Ollama model tag (default: `qwen3.5:9b`).
+
+---
+
+## Output Contract
+
+Responses conform to standard structured schema:
+
+```json
+{
+  "summary": "string",
+  "primary_intent": "string",
+  "key_topics": ["string"],
+  "emotional_tone": "string",
+  "outcomes_and_open_questions": ["string"],
+  "scores": {
+    "intent_clarity": 0,
+    "relevance": 0,
+    "constructive_quality": 0,
+    "mutual_understanding": 0,
+    "goal_progress": 0
+  }
+}
+```
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
