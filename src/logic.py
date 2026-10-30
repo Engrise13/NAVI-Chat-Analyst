@@ -46,9 +46,6 @@ def msg_slice(input_text: str, part_size: int = 500, overlap: int = 50) -> list[
         part = lines[i : i + part_size]
         ready_parts.append("\n".join(part))
 
-        if i + part_size >= len(lines):
-            break
-
     return ready_parts
 
 
@@ -57,33 +54,40 @@ def chat_parse(chat_path: str | Path) -> str:
     if not path.is_file():
         raise FileNotFoundError(f"chat file not found: {path}")
 
+    content = path.read_text(encoding="utf-8", errors="replace")
     try:
-        with path.open("r", encoding="utf-8") as file:
-            json_content = json.load(file)
-    except (ValueError, UnicodeDecodeError):
-        return path.read_text(encoding="utf-8").strip()
+        json_content = json.loads(content)
+    except json.JSONDecodeError:
+        return content.strip()
 
     messages = json_content.get("messages", [])
+    if not isinstance(messages, list):
+        return content.strip()
+
     lines = []
 
     for msg in messages:
-        if msg.get("type") != "message":
+        if not isinstance(msg, dict) or msg.get("type") != "message":
             continue
 
         sender = msg.get("from", "неизвестный")
-        date = msg.get("date", "неизвестно когда").replace("T", " ")[:16]
-        text = msg.get("text", "")
+        date = str(msg.get("date", "неизвестно когда")).replace("T", " ")[:16]
+        raw_text = msg.get("text", "")
 
-        if isinstance(text, list):
-            normal_parts = [
-                part if isinstance(part, str) else part.get("text", "") for part in text
-            ]
-            text = "".join(normal_parts)
+        if isinstance(raw_text, list):
+            parts = []
+            for item in raw_text:
+                if isinstance(item, str):
+                    parts.append(item)
+                elif isinstance(item, dict):
+                    parts.append(str(item.get("text", "")))
+            text = "".join(parts)
+        else:
+            text = str(raw_text)
 
-        # схлопываем переносы внутри сообщения: 1 сообщение = строго 1 строка
-        text = " ".join(text.split())
-        if text:
-            lines.append(f"[{date}] {sender}: {text}")
+        clean_text = " ".join(text.split())
+        if clean_text:
+            lines.append(f"[{date}] {sender}: {clean_text}")
 
     return "\n".join(lines)
 
@@ -94,7 +98,6 @@ def analyze(
     if not chat.strip():
         raise ValueError("Chat is empty!")
 
-    # берем свежие последние max_messages сообщений
     lines = chat.splitlines()
     if len(lines) > max_messages:
         chat = "\n".join(lines[-max_messages:])
@@ -105,7 +108,7 @@ def analyze(
 
     try:
         if len(parts) == 1:
-            input_prompt = f"{user_prompt}\n<chat>\n{parts[0]}\n</chat>"
+            input_prompt = f"{user_prompt}\n\n<chat>\n{parts[0]}\n</chat>"
             raw_response = ask_llm(
                 prompt=system_prompt,
                 content=input_prompt,
@@ -127,7 +130,7 @@ def analyze(
                 summaries.append(f"--- часть {idx} ---\n{summary}")
 
             combined_summary = "\n\n".join(summaries)
-            final_content = f"{user_prompt}\n<chat_summaries>\n{combined_summary}\n</chat_summaries>"
+            final_content = f"{user_prompt}\n\n<chat_summaries>\n{combined_summary}\n</chat_summaries>"
 
             raw_response = ask_llm(
                 prompt=system_prompt,
