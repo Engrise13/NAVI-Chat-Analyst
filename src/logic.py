@@ -37,7 +37,7 @@ def ask_llm(
     return response["message"]["content"]
 
 
-def msg_slice(input_text: str, part_size: int = 300, overlap: int = 50) -> list[str]:
+def msg_slice(input_text: str, part_size: int = 500, overlap: int = 50) -> list[str]:
     lines = input_text.splitlines()
     ready_parts = []
     step = max(1, part_size - overlap)
@@ -57,12 +57,11 @@ def chat_parse(chat_path: str | Path) -> str:
     if not path.is_file():
         raise FileNotFoundError(f"chat file not found: {path}")
 
-    content = path.read_text(encoding="utf-8").strip()
-
     try:
-        json_content = json.loads(content)
-    except ValueError:
-        return content
+        with path.open("r", encoding="utf-8") as file:
+            json_content = json.load(file)
+    except (ValueError, UnicodeDecodeError):
+        return path.read_text(encoding="utf-8").strip()
 
     messages = json_content.get("messages", [])
     lines = []
@@ -76,24 +75,29 @@ def chat_parse(chat_path: str | Path) -> str:
         text = msg.get("text", "")
 
         if isinstance(text, list):
-            normal_parts = []
-            for part in text:
-                if isinstance(part, str):
-                    normal_parts.append(part)
-                elif isinstance(part, dict):
-                    normal_parts.append(part.get("text", ""))
+            normal_parts = [
+                part if isinstance(part, str) else part.get("text", "") for part in text
+            ]
             text = "".join(normal_parts)
 
-        text = text.strip()
+        # схлопываем переносы внутри сообщения: 1 сообщение = строго 1 строка
+        text = " ".join(text.split())
         if text:
             lines.append(f"[{date}] {sender}: {text}")
 
-    return "\n".join(lines) if lines else content
+    return "\n".join(lines)
 
 
-def analyze(chat: str, model: str, context: int = 8192) -> dict[str, Any]:
+def analyze(
+    chat: str, model: str, context: int = 8192, max_messages: int = 10000
+) -> dict[str, Any]:
     if not chat.strip():
         raise ValueError("Chat is empty!")
+
+    # берем свежие последние max_messages сообщений
+    lines = chat.splitlines()
+    if len(lines) > max_messages:
+        chat = "\n".join(lines[-max_messages:])
 
     parts = msg_slice(chat)
     if not parts:
@@ -112,16 +116,15 @@ def analyze(chat: str, model: str, context: int = 8192) -> dict[str, Any]:
         else:
             summaries = []
             part_prompt = "сделай краткую выжимку фрагмента переписки на 2-3 предложения: ключевые события, факты, темы и динамику общения."
-            part_number = 1
-            for part in parts:
+
+            for idx, part in enumerate(parts, 1):
                 summary = ask_llm(
                     prompt=part_prompt,
                     content=part,
                     model=model,
                     context=context,
                 )
-                summaries.append(f"--- часть {part_number} ---\n{summary}")
-                part_number += 1
+                summaries.append(f"--- часть {idx} ---\n{summary}")
 
             combined_summary = "\n\n".join(summaries)
             final_content = f"{user_prompt}\n<chat_summaries>\n{combined_summary}\n</chat_summaries>"
