@@ -1,40 +1,65 @@
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt
+from rich.prompt import IntPrompt, Prompt
 
 from logic import analyze, chat_parse
 from output import chat_output
 
 console = Console()
+console.clear()
 
-console.print(
-    Panel(
-        "AI chat analyzer built with [bold green]Python[/] & [bold green]Ollama.[/]\n"
-        "[bold green][ chat path ][/] - path to your chat export.\n"
-        "[bold green][ model ][/] - model used. Default: [bold cyan]qwen3.5:9b[/]\n"
-        "The program is calibrated to run at [bold green]8192[/] model tokens.\n"
-        "The program can process up to [bold green]10k[/] chat messages at once.\n",
-        title="[bold] NAVI CHAT ANALYST [/]",
-        border_style="green",
-    )
+start_text = """
+chat analysis engine built with [bold cyan]Python[/]
+[bold magenta]details needed:[/]
+• [bold green]provider URL[/]       OpenAI-compatible endpoint
+• [bold green]API key[/]            model access token
+• [bold green]model name[/]         target LLM identifier
+• [bold green]chat export file[/]   Telegram .json or plain .txt log
+• [bold green]message number[/]     lines from the end (5000 is safe default)
+"""
+
+start_message = Panel(
+    start_text, title="NAVI chat analyst v1.0", border_style="bold green"
 )
 
+
+console.print(start_message)
+
 while True:
-    choice = Prompt.ask(
-        choices=["analyze", "quit"],
-        default="analyze",
-    )
+    try:
+        action = Prompt.ask(
+            "[bold green]choose action[/]",
+            choices=["analyze", "quit"],
+            default="analyze",
+        )
 
-    if choice == "analyze":
-        chat_path = Prompt.ask("[bold green]chat path[/]")
-        model = Prompt.ask("[bold green]model[/]", default="qwen3.5:9b")
-        try:
-            with console.status("[bold magenta]analyzing chat with ollama...[/]"):
-                parsed_chat = chat_parse(chat_path)
-                result = analyze(parsed_chat, model, 8192)
-            chat_output(result)
-        except (FileNotFoundError, ValueError, RuntimeError) as error:
-            console.print(f"[red]{error}[/]")
+        if action == "quit":
+            console.print("[dim]выход...[/]")
+            break
 
-    elif choice == "quit":
+        provider_url = Prompt.ask("[bold green]provider URL[/]")
+
+        api_key = Prompt.ask("[bold green]API key[/]")
+
+        model_name = Prompt.ask("[bold green]model name[/]")
+
+        chat_export = Prompt.ask("[bold green]chat export file[/]")
+
+        message_number = IntPrompt.ask(
+            "[bold green]message number[/]",
+            default=5000,
+        )
+
+        chat_text = chat_parse(chat_export)
+        with console.status("[bold cyan]analyzing...[/]"):
+            result = analyze(
+                chat_text, message_number, provider_url, api_key, model_name
+            )
+        chat_output(result)
+
+    except KeyboardInterrupt:
+        console.print("\n[red]Forcequit![/]")
         break
+
+    except Exception as error:  # noqa: BLE001
+        console.print(f"[red]{error}[/]")

@@ -1,100 +1,128 @@
 # NAVI Chat Analyst
 
-[![Python](https://img.shields.io/badge/Python-3.x-007ACC?logo=python&logoColor=white)](#)
-[![Version](https://img.shields.io/badge/version-1.0-orange)](#)
-[![Status](https://img.shields.io/badge/status-in%20development-gold)](#)
-[![Platform](https://img.shields.io/badge/platform-any-lightgrey)](#)
-[![License](https://img.shields.io/badge/license-MIT-green)](#)
+<p align="left">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python Version" />
+  <img src="https://img.shields.io/badge/OpenAI_API-Compatible-412991?style=flat-square&logo=openai&logoColor=white" alt="OpenAI API Compatible" />
+  <img src="https://img.shields.io/badge/Pydantic-v2-E92063?style=flat-square&logo=pydantic&logoColor=white" alt="Pydantic v2" />
+  <img src="https://img.shields.io/badge/Rich-CLI-00D26A?style=flat-square" alt="Rich CLI" />
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" />
+</p>
 
-Local LLM-powered dialogue analysis engine built on top of Python and Ollama. Evaluates chat logs, extracts structured intent, emotional tone, outcomes, and computes quantified communication metrics via JSON Schema enforcement.
-
----
-
-## Technical Specifications
-
-- **Execution Mode:** Local execution (offline, no external network calls).
-- **Target Context Window:** Calibrated for `8192` model tokens.
-- **Throughput / Capacity:** Scaled to process batches of up to `10,000` messages.
-- **Chunking Pipeline:** Overlapping sliding window (`part_size=500`, `overlap=50`) with recursive chunk summarization for extended logs.
-- **Inference Runtime:** [Ollama](https://ollama.com/) (recommended default: `qwen3.5:9b`).
-- **Input Formats:** Telegram JSON export format or plain raw `.txt` chat dumps.
+CLI-based communication analysis engine powered by OpenAI-compatible LLM endpoints. Parses raw dialogue history, enforces structured JSON output via Pydantic schemas, and renders quantified conversational metrics in the terminal.
 
 ---
 
-## Architecture & Analysis Pipeline
+## Key Features
 
-1. **Ingestion & Normalization:** `chat_parse` standardizes timestamps, sender metadata, and multi-part string entities into single-line uniform logs.
-2. **Context Window Slicing:** Long histories exceeding window limits are split into overlapping chunks, recursively summarized, and aggregated into a high-level representation.
-3. **Structured Inference:** Extracted chat tokens are evaluated against a strict JSON Schema returning:
-   - `summary`: Objective overview of the interaction.
-   - `primary_intent`: Core driver of the dialogue initiator.
-   - `key_topics`: Clustered agenda items and friction points.
-   - `emotional_tone`: Observed conversational temperature and sentiment.
-   - `outcomes_and_open_questions`: Explicit agreements, action items, and unresolved questions.
-   - `scores`: Quantified scalar metrics (0–100): `intent_clarity`, `relevance`, `constructive_quality`, `mutual_understanding`, `goal_progress`.
-4. **Terminal Formatting:** Rendered using sanitized [Rich](https://github.com/Textualize/rich) panel components.
+- **Provider Agnostic:** Connects to any OpenAI-compatible API (OpenAI, OpenRouter, vLLM, LocalAI, Ollama, etc.) via custom `base_url` and token.
+- **Dual Log Parsing:** Ingests Telegram export dumps (`result.json`) and raw plaintext logs (`.txt`).
+- **Tail-Slicing Window:** Truncates analysis to the last $N$ lines (default: 5000) to respect target token limits.
+- **Strict Schema Enforcement:** LLM outputs are constrained to `json_object` and validated through strict Pydantic v2 schemas (`extra="forbid"`).
+- **Dynamic Terminal UI:** Color-coded gradient output (0–100%) and formatted metric cards powered by `rich`.
 
 ---
 
-## Dependencies
+## Technical Architecture
+
+```text
+[Telegram JSON / Plain TXT]
+            │
+            ▼
+     chat_parse()          --> Extracts timestamps, normalize senders & strings
+            │
+            ▼
+      analyze()            --> Slices last N lines, sets temperature=0.2,
+            │                  requests json_object via OpenAI client
+            ▼
+    OutputSchema (Pydantic)--> Enforces field boundaries, types, and forbids extras
+            │
+            ▼
+     chat_output()         --> Renders UI panels and color-scaled metrics
+```
+
+### Validated Metric Schema
+
+The model scores communication parameters on a `0–100` scalar scale:
+
+| Metric | Focus |
+| :--- | :--- |
+| `intent_clarity` | Precision and absence of ambiguity in user queries. |
+| `relevance` | Dialogue adherence to main subject without off-topic drift. |
+| `constructive_quality` | Problem-solving efficiency, lack of toxicity or friction. |
+| `mutual_understanding` | Context retention, lack of redundant re-clarifications. |
+| `goal_progress` | Measurable advancement toward the stated `primary_intent`. |
+
+---
+
+## Requirements
 
 - Python `3.10+`
-- [ollama](https://pypi.org/project/ollama/)
-- [rich](https://pypi.org/project/rich/)
+- Valid endpoint for an OpenAI-compatible API provider
 
 Install dependencies:
 
 ```bash
-pip install ollama rich
-```
-
-Ensure Ollama is running and the target model is pulled:
-
-```bash
-ollama serve
-ollama pull qwen3.5:9b
+pip install openai pydantic rich
 ```
 
 ---
 
 ## Usage
 
-Launch interactive CLI:
+Run the entry point script:
 
 ```bash
 python main.py
 ```
 
-Prompts:
-1. `choice`: select `analyze` or `quit`.
-2. `chat path`: path to input file (`.json` or `.txt`).
-3. `model`: Ollama model tag (default: `qwen3.5:9b`).
+### CLI Parameters
+
+Upon selecting `analyze`, provide the following prompts:
+
+| Prompt | Description | Example |
+| :--- | :--- | :--- |
+| `provider URL` | Base URL of the OpenAI-compatible endpoint | `https://api.openai.com/v1` or `http://localhost:11434/v1` |
+| `API key` | API access key / bearer token | `sk-...` |
+| `model name` | Target model identifier | `gpt-4o-mini`, `qwen2.5:72b` |
+| `chat export file` | Absolute or relative path to log file | `chat.json` or `logs/dialogue.txt` |
+| `message number` | Number of tail lines to evaluate | `5000` |
 
 ---
 
-## Output Contract
+## Schema Contract
 
-Responses conform to standard structured schema:
+The engine outputs and validates against the following data structure:
 
 ```json
 {
-  "summary": "string",
-  "primary_intent": "string",
-  "key_topics": ["string"],
-  "emotional_tone": "string",
-  "outcomes_and_open_questions": ["string"],
+  "summary": "string (2-4 sentences, factual overview)",
+  "primary_intent": "string (core initial objective)",
+  "key_topics": ["string (1-3 words each, 1 to 5 items)"],
+  "emotional_tone": "string (observed emotional state)",
+  "outcomes_and_open_questions": ["string (1 to 5 items)"],
   "scores": {
-    "intent_clarity": 0,
-    "relevance": 0,
-    "constructive_quality": 0,
-    "mutual_understanding": 0,
-    "goal_progress": 0
+    "intent_clarity": 85,
+    "relevance": 90,
+    "constructive_quality": 80,
+    "mutual_understanding": 75,
+    "goal_progress": 85
   }
 }
 ```
 
 ---
 
+## Project Structure
+
+```text
+├── main.py        # CLI interface and runtime loop
+├── logic.py       # File parsers (JSON/TXT) and LLM inference pipeline
+├── model_data.py  # Pydantic schemas (Scores, OutputSchema) and system prompt
+└── output.py     # Rich terminal styling and score-to-color mapping
+```
+
+---
+
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+MIT
