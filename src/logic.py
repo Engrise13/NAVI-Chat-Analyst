@@ -52,14 +52,18 @@ def chat_parse(chat_path: str | Path) -> str:
 
 
 def analyze(
-    input_text: str, max_lines: int, base_url: str, api_key: str, model: str
+    provider_url: str,
+    api_key: str,
+    model_name: str,
+    chat_text: str,
+    message_number: int,
 ) -> dict[str, Any]:
-    client = OpenAI(api_key=api_key, base_url=base_url)
-    lines = input_text.splitlines()[-max_lines:]
+    client = OpenAI(api_key=api_key, base_url=provider_url)
+    lines = chat_text.splitlines()[-message_number:]
     chat = "\n".join(lines)
 
     response = client.chat.completions.create(
-        model=model,
+        model=model_name,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"\n<chat>\n{chat}\n</chat>"},
