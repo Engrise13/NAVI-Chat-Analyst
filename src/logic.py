@@ -9,31 +9,36 @@ from model_data import OutputSchema, system_prompt
 
 
 def chat_parse(chat_path: str | Path) -> str:
-    path = Path(str(chat_path).strip("'\""))
+    path = Path(str(chat_path).strip("'\""))  # strip quotes from path
     if not path.is_file():
         raise FileNotFoundError(f"Сhat file not found: {path}")
 
-    content = path.read_text(encoding="utf-8", errors="replace")
+    content = path.read_text(
+        encoding="utf-8", errors="replace"
+    )  # replace invalid characters
     try:
         json_content = json.loads(content)
     except json.JSONDecodeError:
-        return content.strip()
+        return content.strip()  # fallback to raw text if not valid json
 
     messages = json_content.get("messages", [])
     if not isinstance(messages, list):
-        return content.strip()
-
+        return content.strip()  # fallback if 'messages' is not a list
     lines = []
 
     for msg in messages:
-        if not isinstance(msg, dict) or msg.get("type") != "message":
+        if (
+            not isinstance(msg, dict) or msg.get("type") != "message"
+        ):  # skip non-message entries
             continue
 
         sender = msg.get("from", "неизвестный")
-        date = str(msg.get("date", "неизвестно когда")).replace("T", " ")[:16]
+        date = str(msg.get("date", "неизвестно когда")).replace("T", " ")[
+            :16
+        ]  # format to 'YYYY-MM-DD HH:MM' (up to minutes)
         raw_text = msg.get("text", "")
 
-        if isinstance(raw_text, list):
+        if isinstance(raw_text, list):  # combine text parts
             parts = []
             for item in raw_text:
                 if isinstance(item, str):
@@ -46,7 +51,7 @@ def chat_parse(chat_path: str | Path) -> str:
 
         clean_text = " ".join(text.split())
         if clean_text:
-            lines.append(f"[{date}] {sender}: {clean_text}")
+            lines.append(f"[{date}] {sender}: {clean_text}")  # record formatted line
 
     return "\n".join(lines)
 
@@ -59,7 +64,7 @@ def analyze(
     message_number: int,
 ) -> dict[str, Any]:
     client = OpenAI(api_key=api_key, base_url=provider_url)
-    lines = chat_text.splitlines()[-message_number:]
+    lines = chat_text.splitlines()[-message_number:]  # take last N lines
     chat = "\n".join(lines)
 
     response = client.chat.completions.create(
@@ -71,11 +76,13 @@ def analyze(
         response_format={"type": "json_object"},
         temperature=0.2,
     )
-    content = response.choices[0].message.content
+    content = response.choices[0].message.content  # get response content
     if not content:
         raise ValueError("Model could not analyze chat!")
     try:
-        schema_response = OutputSchema.model_validate_json(content)
+        schema_response = OutputSchema.model_validate_json(
+            content
+        )  # parse and validate json
     except ValidationError as e:
-        raise ValueError(f"JSON Validation Error: {e.errors()[0]['msg']}") from e
-    return schema_response.model_dump()
+        raise ValueError("JSON Validation Error!") from e
+    return schema_response.model_dump()  # convert to dict

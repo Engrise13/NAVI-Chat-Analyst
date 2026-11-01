@@ -34,7 +34,7 @@ while True:
         )
 
         if action == "quit":
-            console.print("[dim]выход...[/]")
+            console.print("[red]Quit![/]")
             break
 
         provider_url = Prompt.ask("[bold green]provider URL[/]")

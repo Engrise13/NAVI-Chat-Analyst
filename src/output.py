@@ -14,14 +14,14 @@ def score_color(num: Any) -> str:
     except (TypeError, ValueError):
         val = 50
 
-    val = max(0, min(100, val))
+    val = max(0, min(100, val))  # clamp value to [0, 100]
     if val <= 50:
         red = 255
-        green = int(255 * val / 50)
+        green = int(255 * val / 50)  # red to yellow
     else:
-        red = int(255 * (100 - val) / 50)
+        red = int(255 * (100 - val) / 50)  # yellow to green
         green = 255
-    return f"bold #{red:02x}{green:02x}00"
+    return f"bold #{red:02x}{green:02x}00"  # hex color string
 
 
 def chat_output(input_json: dict[str, Any]) -> None:
@@ -48,7 +48,9 @@ def chat_output(input_json: dict[str, Any]) -> None:
 
     key_topics = input_json.get("key_topics", [])
     topics_card = Panel(
-        "\n".join(f"[bold magenta]• {escape(str(item))}[/]" for item in key_topics)
+        "\n".join(
+            f"[bold magenta]• {escape(str(item))}[/]" for item in key_topics
+        )  # escape markup to prevent parsing errors
         if key_topics
         else "[dim red]None[/]",
         title="key topics",
