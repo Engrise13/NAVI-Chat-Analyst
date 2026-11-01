@@ -37,13 +37,13 @@ while True:
             console.print("[red]Quit![/]")
             break
 
-        provider_url = Prompt.ask("[bold green]provider URL[/]")
+        provider_url = Prompt.ask("[bold green]provider URL[/]").strip()
 
-        api_key = Prompt.ask("[bold green]API key[/]")
+        api_key = Prompt.ask("[bold green]API key[/]").strip()
 
-        model_name = Prompt.ask("[bold green]model name[/]")
+        model_name = Prompt.ask("[bold green]model name[/]").strip()
 
-        chat_export = Prompt.ask("[bold green]chat export file[/]")
+        chat_export = Prompt.ask("[bold green]chat export file[/]").strip()
 
         message_number = IntPrompt.ask(
             "[bold green]message number[/]",
