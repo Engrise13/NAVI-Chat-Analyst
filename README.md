@@ -10,6 +10,8 @@
 
 CLI-based communication analysis engine powered by OpenAI-compatible LLM endpoints. Parses raw dialogue history, enforces structured JSON output via Pydantic schemas, and renders quantified conversational metrics in the terminal.
 
+![NAVI Chat Analyst Showcase](showcase.png)
+
 ---
 
 ## Key Features
