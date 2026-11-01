@@ -53,7 +53,11 @@ while True:
         chat_text = chat_parse(chat_export)
         with console.status("[bold cyan]analyzing...[/]"):
             result = analyze(
-                chat_text, message_number, provider_url, api_key, model_name
+                provider_url=provider_url,
+                api_key=api_key,
+                model_name=model_name,
+                chat_text=chat_text,
+                message_number=message_number,
             )
         chat_output(result)
 
