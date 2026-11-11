@@ -8,12 +8,14 @@ from output import chat_output
 console = Console()
 console.clear()
 
-start_text = """
+start_text = f"""
 chat analysis engine built with [bold cyan]Python[/]
 [bold magenta]details needed:[/]
+[dim]{"─" * 42}[/]
 • [bold green]provider URL[/]       OpenAI-compatible endpoint
 • [bold green]API key[/]            model access token
 • [bold green]model name[/]         target LLM identifier
+[dim]{"─" * 42}[/]
 • [bold green]chat export file[/]   Telegram .json or plain .txt log
 • [bold green]message number[/]     lines from the end (5000 is safe default)
 """
@@ -22,8 +24,13 @@ start_message = Panel(
     start_text, title="NAVI chat analyst v1.0", border_style="bold green"
 )
 
-
 console.print(start_message)
+
+provider_url = Prompt.ask("[bold green]provider URL[/]").strip()
+
+api_key = Prompt.ask("[bold green]API key[/]").strip()
+
+model_name = Prompt.ask("[bold green]model name[/]").strip()
 
 while True:
     try:
@@ -36,12 +43,6 @@ while True:
         if action == "quit":
             console.print("[red]Quit![/]")
             break
-
-        provider_url = Prompt.ask("[bold green]provider URL[/]").strip()
-
-        api_key = Prompt.ask("[bold green]API key[/]").strip()
-
-        model_name = Prompt.ask("[bold green]model name[/]").strip()
 
         chat_export = Prompt.ask("[bold green]chat export file[/]").strip()
 

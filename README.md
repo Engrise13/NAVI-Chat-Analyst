@@ -1,67 +1,40 @@
 # NAVI Chat Analyst
 
 <p align="left">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python Version" />
-  <img src="https://img.shields.io/badge/OpenAI_API-Compatible-412991?style=flat-square&logo=openai&logoColor=white" alt="OpenAI API Compatible" />
-  <img src="https://img.shields.io/badge/Pydantic-v2-E92063?style=flat-square&logo=pydantic&logoColor=white" alt="Pydantic v2" />
-  <img src="https://img.shields.io/badge/Rich-CLI-00D26A?style=flat-square" alt="Rich CLI" />
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/OpenAI_API-Compatible-412991?style=flat-square&logo=openai&logoColor=white" alt="API" />
+  <img src="https://img.shields.io/badge/Pydantic-v2-E92063?style=flat-square&logo=pydantic&logoColor=white" alt="Pydantic" />
+  <img src="https://img.shields.io/badge/Rich-CLI-00D26A?style=flat-square" alt="Rich" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" />
 </p>
 
-CLI-based communication analysis engine powered by OpenAI-compatible LLM endpoints. Parses raw dialogue history, enforces structured JSON output via Pydantic schemas, and renders quantified conversational metrics in the terminal.
+CLI engine for structural communication analysis via OpenAI-compatible LLM endpoints. Ingests raw chat logs, enforces strict JSON serialization via Pydantic v2, and renders quantified conversational metrics using `rich`.
 
 ![NAVI Chat Analyst Showcase](showcase.png)
 
 ---
 
-## Key Features
-
-- **Provider Agnostic:** Connects to any OpenAI-compatible API (OpenAI, OpenRouter, vLLM, LocalAI, Ollama, etc.) via custom `base_url` and token.
-- **Dual Log Parsing:** Ingests Telegram export dumps (`result.json`) and raw plaintext logs (`.txt`).
-- **Tail-Slicing Window:** Truncates analysis to the last $N$ lines (default: 5000) to respect target token limits.
-- **Strict Schema Enforcement:** LLM outputs are constrained to `json_object` and validated through strict Pydantic v2 schemas (`extra="forbid"`).
-- **Dynamic Terminal UI:** Color-coded gradient output (0–100%) and formatted metric cards powered by `rich`.
-
----
-
-## Technical Architecture
+## Architecture
 
 ```text
 [Telegram JSON / Plain TXT]
             │
             ▼
-     chat_parse()          --> Extracts timestamps, normalize senders & strings
+      chat_parse()         --> Normalizes senders, timestamps, and lines
             │
             ▼
-      analyze()            --> Slices last N lines, sets temperature=0.2,
-            │                  requests json_object via OpenAI client
-            ▼
-    OutputSchema (Pydantic)--> Enforces field boundaries, types, and forbids extras
+       analyze()           --> Tail-slices last N lines, temp=0.2, json_object mode
             │
             ▼
-     chat_output()         --> Renders UI panels and color-scaled metrics
+    OutputSchema (Pydantic)--> Validates types, ranges, extra="forbid"
+            │
+            ▼
+      chat_output()        --> Renders terminal cards and 0–100 scalar gradients
 ```
-
-### Validated Metric Schema
-
-The model scores communication parameters on a `0–100` scalar scale:
-
-| Metric | Focus |
-| :--- | :--- |
-| `intent_clarity` | Precision and absence of ambiguity in user queries. |
-| `relevance` | Dialogue adherence to main subject without off-topic drift. |
-| `constructive_quality` | Problem-solving efficiency, lack of toxicity or friction. |
-| `mutual_understanding` | Context retention, lack of redundant re-clarifications. |
-| `goal_progress` | Measurable advancement toward the stated `primary_intent`. |
 
 ---
 
-## Requirements
-
-- Python `3.10+`
-- Valid endpoint for an OpenAI-compatible API provider
-
-Install dependencies:
+## Installation
 
 ```bash
 pip install openai pydantic rich
@@ -69,58 +42,59 @@ pip install openai pydantic rich
 
 ---
 
-## Usage
+## Configuration & Execution
 
-Run the entry point script:
+Run the entry point:
 
 ```bash
 python main.py
 ```
 
-### CLI Parameters
+### 1. Session Parameters (Prompted on Startup)
+Collected once prior to the analysis loop:
+- **Provider URL:** OpenAI-compatible endpoint base (`https://api.openai.com/v1`, `http://localhost:11434/v1`, etc.).
+- **API Key:** Bearer token / API key.
+- **Model Name:** Target LLM model identifier (`gpt-4o-mini`, `gemini-2.5-flash`, `qwen2.5:72b`, etc.).
 
-Upon selecting `analyze`, provide the following prompts:
-
-| Prompt | Description | Example |
-| :--- | :--- | :--- |
-| `provider URL` | Base URL of the OpenAI-compatible endpoint | `https://api.openai.com/v1` or `http://localhost:11434/v1` |
-| `API key` | API access key / bearer token | `sk-...` |
-| `model name` | Target model identifier | `gpt-4o-mini`, `qwen2.5:72b` |
-| `chat export file` | Absolute or relative path to log file | `chat.json` or `logs/dialogue.txt` |
-| `message number` | Number of tail lines to evaluate | `5000` |
+### 2. Analysis Parameters (Prompted per Run)
+- **Chat export file:** Relative or absolute path to a Telegram export (`result.json`) or plain log (`.txt`). A preconfigured test dialogue is included: `sample_chat.txt`.
+- **Message number:** Number of tail lines evaluated from the end of the log (default: `5000`).
 
 ---
 
-## Schema Contract
+## Validation Contract (Pydantic v2)
 
-The engine outputs and validates against the following data structure:
+Responses are constrained to raw JSON matching the following contract:
 
 ```json
 {
-  "summary": "string (2-4 sentences, factual overview)",
-  "primary_intent": "string (core initial objective)",
+  "summary": "string (2-4 sentences, strictly factual overview)",
+  "primary_intent": "string (initiator target objective)",
   "key_topics": ["string (1-3 words each, 1 to 5 items)"],
-  "emotional_tone": "string (observed emotional state)",
-  "outcomes_and_open_questions": ["string (1 to 5 items)"],
+  "emotional_tone": "string (derived exclusively from vocabulary and tone)",
+  "outcomes_and_open_questions": ["string (tangible results / pending issues, 1 to 5 items)"],
   "scores": {
-    "intent_clarity": 85,
-    "relevance": 90,
-    "constructive_quality": 80,
-    "mutual_understanding": 75,
-    "goal_progress": 85
+    "intent_clarity": 0,
+    "relevance": 0,
+    "constructive_quality": 0,
+    "mutual_understanding": 0,
+    "goal_progress": 0
   }
 }
 ```
+
+All metrics in `scores` are enforced as integer values in the range `[0, 100]`.
 
 ---
 
 ## Project Structure
 
 ```text
-├── main.py        # CLI interface and runtime loop
-├── logic.py       # File parsers (JSON/TXT) and LLM inference pipeline
-├── model_data.py  # Pydantic schemas (Scores, OutputSchema) and system prompt
-└── output.py     # Rich terminal styling and score-to-color mapping
+├── main.py         # Entry point, session credential init, interactive loop
+├── logic.py        # Log parsers (JSON/TXT), tail slicer, LLM call pipeline
+├── model_data.py   # Pydantic schemas (Scores, OutputSchema), system prompt
+├── output.py       # Rich terminal renderers, score color-mapping
+└── sample_chat.txt # Bundled test dialogue (200-line incident transcript)
 ```
 
 ---
