@@ -20,16 +20,16 @@ CLI engine for structural communication analysis via OpenAI-compatible LLM endpo
 [Telegram JSON / Plain TXT]
             │
             ▼
-      chat_parse()         --> Normalizes senders, timestamps, and lines
+      chat_parse()          --> Normalizes senders, timestamps, and lines
             │
             ▼
-       analyze()           --> Tail-slices last N lines, temp=0.2, json_object mode
+       analyze()            --> Tail-slices last N lines, temp=0.2, json_object mode
             │
             ▼
-    OutputSchema (Pydantic)--> Validates types, ranges, extra="forbid"
+    OutputSchema (Pydantic) --> Validates types, ranges, extra="forbid"
             │
             ▼
-      chat_output()        --> Renders terminal cards and 0–100 scalar gradients
+      chat_output()         --> Renders terminal cards and 0–100 scalar gradients
 ```
 
 ---
